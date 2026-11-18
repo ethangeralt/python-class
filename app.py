@@ -192,11 +192,12 @@ class DemoHandler(BaseHTTPRequestHandler):
         container_status = "🐳 Docker Container (Isolated)" if is_docker else "💻 Local Host Machine"
         os_info = f"{platform.system()} ({platform.release()})"
 
-        html_content = HTML_TEMPLATE.format(
-            python_version=current_version,
-            container_status=container_status,
-            os_info=os_info,
-            pid=os.getpid()
+        html_content = (
+            HTML_TEMPLATE
+            .replace("{python_version}", current_version)
+            .replace("{container_status}", container_status)
+            .replace("{os_info}", os_info)
+            .replace("{pid}", str(os.getpid()))
         )
 
         self.send_response(200)
