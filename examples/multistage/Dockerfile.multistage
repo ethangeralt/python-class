@@ -1,0 +1,41 @@
+# ========================================================
+# Multi-Stage Dockerfile
+# ========================================================
+
+# --------------------------------------------------------
+# Stage 1: Build & Compile
+# --------------------------------------------------------
+# Uses full Golang toolchain to compile the static binary.
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependency definition and source code
+COPY go.mod ./
+COPY main.go ./
+
+# Compile statically linked binary with debug symbols stripped (-s -w)
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server .
+
+# --------------------------------------------------------
+# Stage 2: Minimal Production Runtime
+# --------------------------------------------------------
+# Only the compiled artifact is copied; compiler, toolchain,
+# and source code are completely discarded.
+FROM alpine:3.20
+
+# Install CA certificates for HTTPS and create a non-root user
+RUN apk --no-cache add ca-certificates && \
+    adduser -D -g '' appuser
+
+WORKDIR /app
+
+# Copy ONLY the compiled binary from the builder stage
+COPY --from=builder /app/server .
+
+# Run as non-privileged user for enhanced security
+USER appuser
+
+EXPOSE 8080
+
+ENTRYPOINT ["./server"]
